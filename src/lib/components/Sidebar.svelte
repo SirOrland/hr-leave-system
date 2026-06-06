@@ -214,7 +214,7 @@
   }
 
   .user-meta { min-width: 0; }
-  .user-name { font-size: 0.8125rem; font-weight: 600; color: white; truncate; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .user-name { font-size: 0.8125rem; font-weight: 600; color: white; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .user-code { font-size: 0.6875rem; color: rgb(255 255 255 / 0.4); }
 
   .sign-out-btn {
