@@ -1,11 +1,10 @@
 import { neon } from '@neondatabase/serverless';
-import { DATABASE_URL } from '$env/static/private';
-
-let _sql;
+import { env } from '$env/dynamic/private';
 
 export function getDb() {
-  if (!_sql) {
-    _sql = neon(DATABASE_URL);
+  const url = env.DATABASE_URL;
+  if (!url || url.includes('placeholder')) {
+    throw new Error('DATABASE_URL is not configured. Add it to Vercel Environment Variables.');
   }
-  return _sql;
+  return neon(url);
 }
