@@ -126,8 +126,10 @@
                   {r.reason.length > 48 ? r.reason.slice(0,48)+'…' : r.reason}
                 </td>
                 <td>
-                  {#if r.attachment_url}
-                    <span class="badge badge-approved">📎</span>
+                  {#if r.has_attachment}
+                    <a href="/api/attachment?id={r.id}" target="_blank" class="attach-link" title="View attachment">
+                      📎 View
+                    </a>
                   {:else}
                     <span class="text-gray text-xs">—</span>
                   {/if}
@@ -219,4 +221,24 @@
   .action-btns { display: flex; gap: 6px; }
 
   .remarks-input { font-size: 0.75rem; padding: 5px 10px; border-radius: 8px; }
+
+  .attach-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--primary);
+    background: rgba(99,102,241,0.08);
+    border: 1px solid rgba(99,102,241,0.2);
+    padding: 3px 10px;
+    border-radius: 8px;
+    text-decoration: none;
+    white-space: nowrap;
+    transition: all 0.15s ease;
+  }
+  .attach-link:hover {
+    background: rgba(99,102,241,0.16);
+    border-color: rgba(99,102,241,0.4);
+  }
 </style>

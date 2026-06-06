@@ -8,7 +8,8 @@ export async function load({ locals }) {
   const requests = await db`
     SELECT
       lr.id, lr.status, lr.start_date, lr.end_date,
-      lr.duration_days, lr.reason, lr.attachment_url, lr.created_at,
+      lr.duration_days, lr.reason, lr.created_at,
+      (lr.attachment_url IS NOT NULL AND lr.attachment_url != '') AS has_attachment,
       lt.name AS leave_type,
       u.name  AS employee_name,
       u.employee_code,

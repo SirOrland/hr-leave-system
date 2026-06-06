@@ -207,7 +207,7 @@ export const actions = {
         return fail(400, { errors: { attachment: 'Unsupported file type.' }, formValues: { leaveTypeId, startDate, endDate, reason } });
       }
       const b64 = Buffer.from(await file.arrayBuffer()).toString('base64');
-      attachmentUrl = `data:${file.type};base64,${b64.slice(0, 200)}…(file stored)`;
+      attachmentUrl = `data:${file.type};base64,${b64}`;
     }
 
     await db`
