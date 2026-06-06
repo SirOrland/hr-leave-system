@@ -2,84 +2,101 @@
   import { enhance } from '$app/forms';
   export let form;
 
-  let loading = false;
-  let showPass = false;
+  let loading   = false;
+  let showPass  = false;
 </script>
 
 <svelte:head><title>Sign In — HRPortal</title></svelte:head>
 
 <div class="login-page">
+
   <!-- Left panel -->
   <div class="left-panel">
+    <!-- Floating orbs -->
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
+
     <div class="left-content">
-      <div class="logo-mark">HR</div>
-      <h1 class="hero-title">Streamline your<br/>HR operations</h1>
+      <div class="brand-mark">HR</div>
+      <h1 class="hero-title">
+        Streamline<br/>
+        <span class="highlight">HR operations</span>
+      </h1>
       <p class="hero-sub">
-        A unified platform for leave management, attendance tracking,
-        and workforce oversight — all in one place.
+        A unified platform for leave management,<br/>
+        attendance tracking, and workforce oversight.
       </p>
-      <div class="feature-list">
-        {#each ['Smart leave approval workflows', 'Real-time attendance tracking', 'Role-based access control', 'Instant status notifications'] as feat}
+
+      <div class="features">
+        {#each [
+          ['✓','Smart leave approval workflows'],
+          ['✓','Real-time attendance tracking'],
+          ['✓','Role-based access control'],
+          ['✓','Instant status notifications']
+        ] as [icon, feat]}
           <div class="feature-item">
-            <span class="feat-check">✓</span>
-            <span>{feat}</span>
+            <span class="feat-icon">{icon}</span>
+            {feat}
           </div>
         {/each}
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-row">
+        <div class="stat"><span class="stat-num">3</span><span class="stat-lbl">Roles</span></div>
+        <div class="stat-div"></div>
+        <div class="stat"><span class="stat-num">8</span><span class="stat-lbl">DB Tables</span></div>
+        <div class="stat-div"></div>
+        <div class="stat"><span class="stat-num">∞</span><span class="stat-lbl">Possibilities</span></div>
       </div>
     </div>
   </div>
 
-  <!-- Right panel -->
+  <!-- Right panel (glass card) -->
   <div class="right-panel">
     <div class="form-card">
-      <div class="form-header">
-        <div class="mobile-logo">HR</div>
-        <h2 class="form-title">Welcome Back</h2>
-        <p class="form-desc">Sign in to your HR portal</p>
+      <!-- Header -->
+      <div class="card-top">
+        <div class="card-logo">HR</div>
+        <h2 class="card-title">Welcome back</h2>
+        <p class="card-sub">Sign in to your HR portal</p>
       </div>
 
       {#if form?.error}
-        <div class="alert alert-error" role="alert">
+        <div class="alert alert-error">
           <span>⚠</span> {form.error}
         </div>
       {/if}
 
-      <form
-        method="POST"
-        use:enhance={() => {
-          loading = true;
-          return async ({ update }) => {
-            await update();
-            loading = false;
-          };
-        }}
-      >
+      <form method="POST" use:enhance={() => {
+        loading = true;
+        return async ({ update }) => { await update(); loading = false; };
+      }}>
+
         <div class="form-group">
-          <label class="form-label" for="email">
-            Email Address <span class="req">*</span>
-          </label>
-          <input
-            id="email"
-            name="email"
-            type="email"
-            class="form-control"
-            placeholder="you@company.com"
-            value={form?.email ?? ''}
-            autocomplete="email"
-            required
-          />
+          <label class="form-label" for="email">Email address</label>
+          <div class="input-wrap">
+            <span class="input-icon">@</span>
+            <input
+              id="email" name="email" type="email"
+              class="form-control pl-input"
+              placeholder="you@company.com"
+              value={form?.email ?? ''}
+              autocomplete="email"
+              required
+            />
+          </div>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="password">
-            Password <span class="req">*</span>
-          </label>
-          <div class="pass-wrap">
+          <label class="form-label" for="password">Password</label>
+          <div class="input-wrap">
+            <span class="input-icon">🔒</span>
             <input
-              id="password"
-              name="password"
+              id="password" name="password"
               type={showPass ? 'text' : 'password'}
-              class="form-control"
+              class="form-control pl-input"
               placeholder="Enter your password"
               autocomplete="current-password"
               required
@@ -88,33 +105,46 @@
               type="button"
               class="pass-toggle"
               on:click={() => (showPass = !showPass)}
-              aria-label={showPass ? 'Hide password' : 'Show password'}
+              aria-label="Toggle password"
             >
               {showPass ? '🙈' : '👁'}
             </button>
           </div>
         </div>
 
-        <button type="submit" class="btn btn-primary w-full btn-lg" disabled={loading}>
+        <button type="submit" class="btn btn-primary w-full btn-lg submit-btn" disabled={loading}>
           {#if loading}
             <span class="spinner"></span> Signing in…
           {:else}
-            Sign In
+            Sign In →
           {/if}
         </button>
       </form>
 
-      <div class="demo-hint">
-        <p class="demo-label">Demo credentials</p>
-        <div class="demo-accounts">
-          <div class="demo-row"><span class="demo-role">HR Admin</span><code>admin@hrms.com</code></div>
-          <div class="demo-row"><span class="demo-role">Manager</span><code>manager@hrms.com</code></div>
-          <div class="demo-row"><span class="demo-role">Employee</span><code>jane@hrms.com</code></div>
+      <!-- Demo credentials -->
+      <div class="demo-box">
+        <div class="demo-header">
+          <span class="demo-badge">DEMO</span>
+          <span class="demo-title">Test credentials</span>
         </div>
-        <p class="demo-pw">All passwords end with <code>@1234</code> (Role@1234)</p>
+        <div class="demo-rows">
+          {#each [
+            ['HR Admin',  'admin@hrms.com',   'Admin@1234'],
+            ['Manager',   'manager@hrms.com', 'Manager@1234'],
+            ['Employee',  'jane@hrms.com',    'Employee@1234']
+          ] as [role, email, pass]}
+            <div class="demo-row">
+              <span class="demo-role-tag">{role}</span>
+              <code class="demo-email">{email}</code>
+              <code class="demo-pass">{pass}</code>
+            </div>
+          {/each}
+        </div>
       </div>
+
     </div>
   </div>
+
 </div>
 
 <style>
@@ -123,117 +153,183 @@
     min-height: 100vh;
   }
 
-  /* Left */
+  /* ---- Left panel ---- */
   .left-panel {
     flex: 1;
-    background: linear-gradient(135deg, #1E293B 0%, #0F172A 100%);
+    background: linear-gradient(145deg, #0F172A 0%, #1E1B4B 40%, #0F172A 100%);
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 48px;
+    padding: 60px 56px;
+    position: relative;
+    overflow: hidden;
   }
 
-  .left-content { max-width: 440px; }
+  /* Ambient orbs */
+  .orb {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(80px);
+    opacity: 0.25;
+    animation: pulse 6s ease-in-out infinite;
+  }
 
-  .logo-mark {
-    width: 52px;
-    height: 52px;
-    background: var(--primary);
-    border-radius: 14px;
+  .orb-1 { width: 400px; height: 400px; background: #6366F1; top: -120px; left: -80px; animation-delay: 0s; }
+  .orb-2 { width: 300px; height: 300px; background: #8B5CF6; bottom: -80px; right: -60px; animation-delay: 2s; }
+  .orb-3 { width: 200px; height: 200px; background: #3B82F6; top: 50%; left: 50%; animation-delay: 4s; }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 0.25; }
+    50%       { transform: scale(1.1); opacity: 0.35; }
+  }
+
+  .left-content { max-width: 440px; position: relative; z-index: 1; }
+
+  .brand-mark {
+    width: 54px;
+    height: 54px;
+    background: linear-gradient(135deg, #6366F1, #8B5CF6);
+    border-radius: 16px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.1rem;
-    font-weight: 800;
+    font-size: 1rem;
+    font-weight: 900;
     color: white;
-    margin-bottom: 32px;
-    letter-spacing: 0.03em;
+    margin-bottom: 36px;
+    letter-spacing: 0.05em;
+    box-shadow: 0 8px 24px rgba(99,102,241,0.5);
   }
 
   .hero-title {
-    font-size: 2.25rem;
-    font-weight: 800;
+    font-size: 2.75rem;
+    font-weight: 900;
     color: white;
-    line-height: 1.2;
-    margin-bottom: 16px;
+    line-height: 1.15;
+    margin-bottom: 18px;
+    letter-spacing: -0.03em;
+  }
+
+  .highlight {
+    background: linear-gradient(135deg, #818CF8, #C084FC);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 
   .hero-sub {
     font-size: 1rem;
-    color: rgb(255 255 255 / 0.55);
+    color: rgba(255,255,255,0.5);
     line-height: 1.7;
     margin-bottom: 32px;
   }
 
-  .feature-list { display: flex; flex-direction: column; gap: 12px; }
+  .features { display: flex; flex-direction: column; gap: 13px; margin-bottom: 40px; }
 
   .feature-item {
     display: flex;
     align-items: center;
     gap: 12px;
-    color: rgb(255 255 255 / 0.7);
+    color: rgba(255,255,255,0.65);
     font-size: 0.9375rem;
   }
 
-  .feat-check {
-    width: 22px;
-    height: 22px;
+  .feat-icon {
+    width: 24px;
+    height: 24px;
     border-radius: 50%;
-    background: rgb(79 70 229 / 0.3);
+    background: rgba(99,102,241,0.35);
     color: #818CF8;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 0.75rem;
-    font-weight: 700;
+    font-weight: 800;
     flex-shrink: 0;
   }
 
-  /* Right */
+  .stats-row {
+    display: flex;
+    align-items: center;
+    gap: 24px;
+    padding: 20px 24px;
+    background: rgba(255,255,255,0.05);
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.08);
+    backdrop-filter: blur(12px);
+  }
+
+  .stat { text-align: center; }
+  .stat-num { display: block; font-size: 1.5rem; font-weight: 900; color: white; letter-spacing: -0.02em; }
+  .stat-lbl { display: block; font-size: 0.6875rem; color: rgba(255,255,255,0.4); text-transform: uppercase; letter-spacing: 0.07em; margin-top: 2px; }
+  .stat-div { width: 1px; height: 40px; background: rgba(255,255,255,0.1); }
+
+  /* ---- Right panel ---- */
   .right-panel {
-    width: 480px;
+    width: 520px;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 40px 32px;
-    background: var(--gray-50);
+    padding: 48px 36px;
+    background: rgba(240,244,255,0.6);
+    backdrop-filter: blur(30px);
   }
 
   .form-card {
     width: 100%;
-    max-width: 400px;
+    max-width: 420px;
+    background: rgba(255,255,255,0.85);
+    backdrop-filter: blur(30px);
+    -webkit-backdrop-filter: blur(30px);
+    border: 1px solid rgba(255,255,255,0.8);
+    border-radius: 28px;
+    padding: 36px;
+    box-shadow: 0 20px 60px rgba(99,102,241,0.12), 0 4px 16px rgba(0,0,0,0.06);
   }
 
-  .form-header { margin-bottom: 28px; }
+  .card-top { text-align: center; margin-bottom: 28px; }
 
-  .mobile-logo {
-    display: none;
-    width: 42px;
-    height: 42px;
-    background: var(--primary);
-    border-radius: 10px;
-    color: white;
-    font-size: 0.875rem;
-    font-weight: 800;
+  .card-logo {
+    width: 52px;
+    height: 52px;
+    background: linear-gradient(135deg, #6366F1, #8B5CF6);
+    border-radius: 16px;
+    display: flex;
     align-items: center;
     justify-content: center;
-    margin-bottom: 16px;
+    font-size: 1rem;
+    font-weight: 900;
+    color: white;
+    margin: 0 auto 16px;
+    box-shadow: 0 6px 20px rgba(99,102,241,0.4);
   }
 
-  .form-title {
+  .card-title {
     font-size: 1.625rem;
     font-weight: 800;
-    color: var(--gray-900);
+    color: #0F172A;
+    letter-spacing: -0.02em;
     margin-bottom: 6px;
   }
 
-  .form-desc { font-size: 0.9375rem; color: var(--gray-500); }
+  .card-sub { font-size: 0.9375rem; color: #64748B; }
 
-  .req { color: var(--danger); }
+  /* Input with icon */
+  .input-wrap { position: relative; }
 
-  /* Password field */
-  .pass-wrap { position: relative; }
-  .pass-wrap .form-control { padding-right: 44px; }
+  .input-icon {
+    position: absolute;
+    left: 13px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94A3B8;
+    font-size: 0.875rem;
+    pointer-events: none;
+    line-height: 1;
+  }
+
+  .pl-input { padding-left: 36px !important; }
+  .pl-input:last-of-type { padding-right: 44px; }
 
   .pass-toggle {
     position: absolute;
@@ -245,75 +341,90 @@
     cursor: pointer;
     font-size: 1rem;
     line-height: 1;
-    color: var(--gray-400);
-    padding: 0;
+    color: #94A3B8;
   }
 
-  /* Spinner */
+  .submit-btn {
+    margin-top: 4px;
+    border-radius: 12px;
+    height: 48px;
+    font-size: 1rem;
+    letter-spacing: 0.01em;
+  }
+
   .spinner {
-    width: 14px;
-    height: 14px;
-    border: 2px solid rgb(255 255 255 / 0.3);
+    width: 16px;
+    height: 16px;
+    border: 2.5px solid rgba(255,255,255,0.3);
     border-top-color: white;
     border-radius: 50%;
     animation: spin 0.7s linear infinite;
     display: inline-block;
   }
-
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* Demo hint */
-  .demo-hint {
-    margin-top: 28px;
+  /* Demo box */
+  .demo-box {
+    margin-top: 24px;
     padding: 16px;
-    background: var(--gray-100);
-    border-radius: var(--radius-md);
-    border: 1px solid var(--gray-200);
+    background: rgba(99,102,241,0.04);
+    border-radius: 14px;
+    border: 1px solid rgba(99,102,241,0.1);
   }
 
-  .demo-label {
-    font-size: 0.6875rem;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    color: var(--gray-400);
-    margin-bottom: 10px;
+  .demo-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
   }
 
-  .demo-accounts { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+  .demo-badge {
+    font-size: 0.6rem;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    background: linear-gradient(135deg, #6366F1, #8B5CF6);
+    color: white;
+    padding: 2px 8px;
+    border-radius: 9999px;
+  }
+
+  .demo-title { font-size: 0.8125rem; font-weight: 600; color: #64748B; }
+
+  .demo-rows { display: flex; flex-direction: column; gap: 8px; }
 
   .demo-row {
     display: flex;
     align-items: center;
     gap: 8px;
     font-size: 0.8125rem;
+    flex-wrap: wrap;
   }
 
-  .demo-role {
-    width: 70px;
+  .demo-role-tag {
     font-size: 0.6875rem;
-    font-weight: 700;
-    color: var(--gray-500);
+    font-weight: 800;
+    color: #6366F1;
+    width: 68px;
     text-transform: uppercase;
     letter-spacing: 0.04em;
   }
 
   code {
     font-family: 'Courier New', monospace;
-    font-size: 0.8125rem;
+    font-size: 0.78rem;
     background: white;
-    padding: 2px 6px;
-    border-radius: 4px;
-    border: 1px solid var(--gray-200);
-    color: var(--primary);
+    padding: 2px 8px;
+    border-radius: 6px;
+    border: 1px solid rgba(0,0,0,0.08);
+    color: #334155;
   }
 
-  .demo-pw { font-size: 0.75rem; color: var(--gray-400); }
+  .demo-pass { color: #6366F1; }
 
   /* Responsive */
-  @media (max-width: 860px) {
+  @media (max-width: 900px) {
     .left-panel { display: none; }
     .right-panel { width: 100%; }
-    .mobile-logo { display: flex; }
   }
 </style>
