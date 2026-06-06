@@ -8,11 +8,13 @@
 
   const navByRole = {
     employee: [
-      { href: '/employee/dashboard', icon: '⊞', label: 'Dashboard' }
+      { href: '/employee/dashboard', icon: '⊞', label: 'Dashboard' },
+      { href: '/employee/dtr',       icon: '📋', label: 'My DTR' }
     ],
     manager: [
-      { href: '/manager/dashboard', icon: '⊞', label: 'Dashboard' },
-      { href: '/employee/dashboard', icon: '👤', label: 'My Portal' }
+      { href: '/manager/dashboard',  icon: '⊞', label: 'Dashboard' },
+      { href: '/employee/dashboard', icon: '👤', label: 'My Portal' },
+      { href: '/employee/dtr',       icon: '📋', label: 'My DTR' }
     ],
     hr_admin: [
       { href: '/hr/dashboard',      icon: '⊞', label: 'Dashboard' },
