@@ -7,7 +7,7 @@ export async function GET({ locals }) {
 
   const db   = getDb();
   const rows = await db`
-    SELECT date, clock_in_time, clock_out_time, status, location
+    SELECT date, am_in, am_out, pm_in, pm_out, status, location
     FROM   attendance_records
     WHERE  employee_id = ${locals.user.id} AND date = CURRENT_DATE
     LIMIT  1

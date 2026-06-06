@@ -24,10 +24,12 @@
   function startEdit(r) {
     editingId = r.id;
     editData = {
-      clock_in:  r.clock_in_time  ? new Date(r.clock_in_time).toISOString().slice(0,16)  : '',
-      clock_out: r.clock_out_time ? new Date(r.clock_out_time).toISOString().slice(0,16) : '',
-      status:    r.status,
-      location:  r.location ?? ''
+      am_in:    r.am_in    ? new Date(r.am_in).toISOString().slice(0,16)    : '',
+      am_out:   r.am_out   ? new Date(r.am_out).toISOString().slice(0,16)   : '',
+      pm_in:    r.pm_in    ? new Date(r.pm_in).toISOString().slice(0,16)    : '',
+      pm_out:   r.pm_out   ? new Date(r.pm_out).toISOString().slice(0,16)   : '',
+      status:   r.status,
+      location: r.location ?? ''
     };
   }
 
@@ -36,12 +38,12 @@
     return new Date(dt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
   }
 
-  function duration(i, o) {
-    if (!i || !o) return '—';
-    const mins = Math.round((new Date(o) - new Date(i)) / 60_000);
-    const h = Math.floor(mins / 60);
-    const m = mins % 60;
-    return `${h}h ${m}m`;
+  function totalHours(r) {
+    let mins = 0;
+    if (r.am_in && r.am_out) mins += (new Date(r.am_out) - new Date(r.am_in)) / 60_000;
+    if (r.pm_in && r.pm_out) mins += (new Date(r.pm_out) - new Date(r.pm_in)) / 60_000;
+    if (mins <= 0) return '—';
+    return `${Math.floor(mins/60)}h ${Math.round(mins%60)}m`;
   }
 
   const STATUSES = ['Present', 'Late', 'Absent', 'Half Day'];
@@ -106,9 +108,11 @@
           <thead>
             <tr>
               <th>Employee</th>
-              <th>Clock In</th>
-              <th>Clock Out</th>
-              <th>Duration</th>
+              <th>AM In</th>
+              <th>AM Out</th>
+              <th>PM In</th>
+              <th>PM Out</th>
+              <th>Total</th>
               <th>Status</th>
               <th>Location</th>
               <th>Actions</th>
@@ -127,17 +131,25 @@
                       </div>
                     </div>
                   </td>
-                  <td colspan="5">
+                  <td colspan="7">
                     <form method="POST" action="?/updateRecord" class="edit-form"
                       use:enhance={() => ({ async update(res) { await res.update(); } })}>
                       <input type="hidden" name="record_id" value={r.id} />
                       <div class="ef-field">
-                        <label class="form-label" for="ci-{r.id}">Clock In</label>
-                        <input id="ci-{r.id}" type="datetime-local" name="clock_in" class="form-control" bind:value={editData.clock_in} />
+                        <label class="form-label" for="ai-{r.id}">AM In</label>
+                        <input id="ai-{r.id}" type="datetime-local" name="am_in" class="form-control" bind:value={editData.am_in} />
                       </div>
                       <div class="ef-field">
-                        <label class="form-label" for="co-{r.id}">Clock Out</label>
-                        <input id="co-{r.id}" type="datetime-local" name="clock_out" class="form-control" bind:value={editData.clock_out} />
+                        <label class="form-label" for="ao-{r.id}">AM Out</label>
+                        <input id="ao-{r.id}" type="datetime-local" name="am_out" class="form-control" bind:value={editData.am_out} />
+                      </div>
+                      <div class="ef-field">
+                        <label class="form-label" for="pi-{r.id}">PM In</label>
+                        <input id="pi-{r.id}" type="datetime-local" name="pm_in" class="form-control" bind:value={editData.pm_in} />
+                      </div>
+                      <div class="ef-field">
+                        <label class="form-label" for="po-{r.id}">PM Out</label>
+                        <input id="po-{r.id}" type="datetime-local" name="pm_out" class="form-control" bind:value={editData.pm_out} />
                       </div>
                       <div class="ef-field">
                         <label class="form-label" for="st-{r.id}">Status</label>
@@ -168,15 +180,11 @@
                       </div>
                     </div>
                   </td>
-                  <td>
-                    <span class="time-badge in">{fmt(r.clock_in_time)}</span>
-                  </td>
-                  <td>
-                    <span class="time-badge out">{fmt(r.clock_out_time)}</span>
-                  </td>
-                  <td>
-                    <span class="dur-badge">{duration(r.clock_in_time, r.clock_out_time)}</span>
-                  </td>
+                  <td><span class="time-badge in">{fmt(r.am_in)}</span></td>
+                  <td><span class="time-badge out">{fmt(r.am_out)}</span></td>
+                  <td><span class="time-badge in">{fmt(r.pm_in)}</span></td>
+                  <td><span class="time-badge out">{fmt(r.pm_out)}</span></td>
+                  <td><span class="dur-badge">{totalHours(r)}</span></td>
                   <td><Badge value={r.status} /></td>
                   <td class="text-sm text-gray">{r.location ?? '—'}</td>
                   <td>

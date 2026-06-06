@@ -38,8 +38,10 @@
 
   $: if (form?.success) {
     const msgs = {
-      clockIn:    `Clocked in — status: ${form.status ?? 'Present'}`,
-      clockOut:   'Clocked out successfully.',
+      clockAmIn:  `AM Time In recorded — status: ${form.status ?? 'Present'}`,
+      clockAmOut: 'AM Time Out recorded.',
+      clockPmIn:  'PM Time In recorded.',
+      clockPmOut: 'PM Time Out recorded. Have a good evening!',
       applyLeave: 'Leave application submitted!'
     };
     addToast(msgs[form.action] ?? 'Done!', 'success');
@@ -124,40 +126,69 @@
       <div class="card section">
         <div class="card-header">
           <span class="card-title">🕐 Time & Attendance</span>
+          {#if today?.status}<span class="att-status-badge att-{today.status.toLowerCase().replace(' ','-')}">{today.status}</span>{/if}
         </div>
         <div class="card-body">
           <Clock />
 
-          {#if today}
-            <div class="att-grid">
-              <div class="att-item">
-                <span class="att-lbl">Clock In</span>
-                <span class="att-val success">{fmt(today.clock_in_time)}</span>
-              </div>
-              <div class="att-item">
-                <span class="att-lbl">Clock Out</span>
-                <span class="att-val">{fmt(today.clock_out_time)}</span>
-              </div>
-              <div class="att-item" style="grid-column:1/-1">
-                <span class="att-lbl">Location</span>
-                <span class="att-val">{today.location ?? '—'}</span>
+          <!-- AM / PM time grid -->
+          <div class="ampm-grid">
+            <div class="ampm-block am">
+              <div class="ampm-period">☀️ Morning</div>
+              <div class="ampm-row">
+                <div class="ampm-slot">
+                  <span class="ampm-lbl">Time In</span>
+                  <span class="ampm-val {today?.am_in ? 'recorded' : 'empty'}">{fmt(today?.am_in)}</span>
+                </div>
+                <div class="ampm-slot">
+                  <span class="ampm-lbl">Time Out</span>
+                  <span class="ampm-val {today?.am_out ? 'recorded' : 'empty'}">{fmt(today?.am_out)}</span>
+                </div>
               </div>
             </div>
+            <div class="ampm-block pm">
+              <div class="ampm-period">🌤 Afternoon</div>
+              <div class="ampm-row">
+                <div class="ampm-slot">
+                  <span class="ampm-lbl">Time In</span>
+                  <span class="ampm-val {today?.pm_in ? 'recorded' : 'empty'}">{fmt(today?.pm_in)}</span>
+                </div>
+                <div class="ampm-slot">
+                  <span class="ampm-lbl">Time Out</span>
+                  <span class="ampm-val {today?.pm_out ? 'recorded' : 'empty'}">{fmt(today?.pm_out)}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {#if today?.location}
+            <div class="att-location">📍 {today.location}</div>
           {/if}
 
+          <!-- 4 clock buttons -->
           <form method="POST" use:enhance={() => {
             clockLoading = true;
             return async ({ update }) => { await update({ reset: false }); clockLoading = false; };
           }}>
             <input type="hidden" name="location" value={location} />
-            <div class="clock-actions">
-              <button formaction="?/clockIn"  class="btn-clock-in"
-                disabled={clockLoading || !!today?.clock_in_time}>
-                {today?.clock_in_time ? '✓ Clocked In' : '⏵ Clock In'}
+            <div class="clock-actions-grid">
+              <!-- AM row -->
+              <button formaction="?/clockAmIn" class="btn-ampm in"
+                disabled={clockLoading || !!today?.am_in}>
+                {today?.am_in ? '✓ AM In' : '⏵ AM Time In'}
               </button>
-              <button formaction="?/clockOut" class="btn-clock-out"
-                disabled={clockLoading || !today?.clock_in_time || !!today?.clock_out_time}>
-                {today?.clock_out_time ? '✓ Done' : '⏹ Clock Out'}
+              <button formaction="?/clockAmOut" class="btn-ampm out"
+                disabled={clockLoading || !today?.am_in || !!today?.am_out}>
+                {today?.am_out ? '✓ AM Out' : '⏹ AM Time Out'}
+              </button>
+              <!-- PM row -->
+              <button formaction="?/clockPmIn" class="btn-ampm in"
+                disabled={clockLoading || !today?.am_out || !!today?.pm_in}>
+                {today?.pm_in ? '✓ PM In' : '⏵ PM Time In'}
+              </button>
+              <button formaction="?/clockPmOut" class="btn-ampm out"
+                disabled={clockLoading || !today?.pm_in || !!today?.pm_out}>
+                {today?.pm_out ? '✓ PM Out' : '⏹ PM Time Out'}
               </button>
             </div>
           </form>
@@ -356,25 +387,93 @@
 
   .col-left, .col-right { display: flex; flex-direction: column; gap: 20px; }
 
-  /* Attendance */
-  .att-grid {
+  /* Attendance status badge in card header */
+  .att-status-badge {
+    font-size: 0.6875rem; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase;
+    padding: 3px 10px; border-radius: 100px;
+  }
+  .att-present  { background: rgba(16,185,129,0.12); color: #047857; }
+  .att-late     { background: rgba(245,158,11,0.12); color: #B45309; }
+  .att-absent   { background: rgba(239,68,68,0.12);  color: #B91C1C; }
+  .att-half-day { background: rgba(99,102,241,0.12); color: #4338CA; }
+
+  /* AM / PM time grid */
+  .ampm-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 10px;
-    margin-top: 18px;
-    margin-bottom: 4px;
+    margin: 16px 0 6px;
   }
 
-  .att-item {
-    background: rgba(99,102,241,0.04);
+  .ampm-block {
+    background: rgba(99,102,241,0.03);
     border: 1px solid rgba(99,102,241,0.08);
-    border-radius: 10px;
-    padding: 10px 13px;
+    border-radius: 12px;
+    padding: 10px 12px;
+  }
+  .ampm-block.pm {
+    background: rgba(139,92,246,0.03);
+    border-color: rgba(139,92,246,0.08);
   }
 
-  .att-lbl { display: block; font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: var(--gray-400); margin-bottom: 3px; }
-  .att-val { display: block; font-size: 0.9375rem; font-weight: 700; color: var(--gray-800); }
-  .att-val.success { color: var(--success); }
+  .ampm-period {
+    font-size: 0.6875rem; font-weight: 800; text-transform: uppercase;
+    letter-spacing: 0.06em; color: var(--gray-400); margin-bottom: 8px;
+  }
+
+  .ampm-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  .ampm-slot {}
+  .ampm-lbl {
+    display: block; font-size: 0.625rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--gray-400); margin-bottom: 2px;
+  }
+  .ampm-val {
+    display: block; font-size: 0.875rem; font-weight: 800; color: var(--gray-400);
+  }
+  .ampm-val.recorded { color: var(--success); }
+  .ampm-val.empty    { color: var(--gray-300); font-weight: 400; }
+
+  .att-location {
+    font-size: 0.8125rem; color: var(--gray-500); margin-bottom: 14px;
+    padding: 6px 10px; background: rgba(0,0,0,0.03); border-radius: 8px;
+  }
+
+  /* 4-button grid (2×2) */
+  .clock-actions-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 12px;
+  }
+
+  .btn-ampm {
+    height: 40px; border-radius: 10px; border: none; cursor: pointer;
+    font-size: 0.8125rem; font-weight: 800; transition: all 0.18s ease;
+    display: flex; align-items: center; justify-content: center; gap: 5px;
+  }
+  .btn-ampm.in {
+    background: linear-gradient(135deg, #6366F1, #8B5CF6);
+    color: white;
+    box-shadow: 0 3px 10px rgba(99,102,241,0.35);
+  }
+  .btn-ampm.in:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 14px rgba(99,102,241,0.45);
+  }
+  .btn-ampm.out {
+    background: linear-gradient(135deg, #10B981, #047857);
+    color: white;
+    box-shadow: 0 3px 10px rgba(16,185,129,0.3);
+  }
+  .btn-ampm.out:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 14px rgba(16,185,129,0.4);
+  }
+  .btn-ampm:disabled {
+    opacity: 0.45; cursor: not-allowed; transform: none !important;
+    box-shadow: none !important;
+  }
 
   /* Leave balances */
   .balance-item { margin-bottom: 18px; }

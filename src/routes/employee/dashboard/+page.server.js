@@ -6,7 +6,6 @@ export async function load({ locals }) {
   const userId = locals.user.id;
   const year   = new Date().getFullYear();
 
-  // Leave balances
   const balances = await db`
     SELECT lt.name, lb.allocated_days, lb.used_days,
            (lb.allocated_days - lb.used_days) AS remaining_days
@@ -16,11 +15,9 @@ export async function load({ locals }) {
     ORDER  BY lt.name
   `;
 
-  // Aggregate metrics
   const totalRemaining = balances.reduce((s, b) => s + Number(b.remaining_days), 0);
   const totalTaken     = balances.reduce((s, b) => s + Number(b.used_days), 0);
 
-  // Recent leave requests
   const requests = await db`
     SELECT lr.id, lt.name AS leave_type, lr.start_date, lr.end_date,
            lr.duration_days, lr.reason, lr.status, lr.created_at,
@@ -34,15 +31,13 @@ export async function load({ locals }) {
 
   const pendingCount = requests.filter(r => r.status === 'Pending').length;
 
-  // Today's attendance
   const today = await db`
-    SELECT clock_in_time, clock_out_time, status, location
+    SELECT am_in, am_out, pm_in, pm_out, status, location
     FROM   attendance_records
     WHERE  employee_id = ${userId} AND date = CURRENT_DATE
     LIMIT  1
   `;
 
-  // Leave types for form
   const leaveTypes = await db`SELECT id, name FROM leave_types WHERE is_active = true ORDER BY name`;
 
   return {
@@ -54,51 +49,93 @@ export async function load({ locals }) {
   };
 }
 
+// ─── helpers ────────────────────────────────────────────────────────────────
+
+async function getTodayRecord(db, userId) {
+  const rows = await db`
+    SELECT am_in, am_out, pm_in, pm_out
+    FROM   attendance_records
+    WHERE  employee_id = ${userId} AND date = CURRENT_DATE
+    LIMIT  1
+  `;
+  return rows[0] ?? null;
+}
+
+// ─── actions ────────────────────────────────────────────────────────────────
+
 export const actions = {
-  // Clock In
-  clockIn: async ({ locals, request }) => {
-    const db = getDb();
-    const userId = locals.user.id;
-    const data   = await request.formData();
-    const location = (data.get('location') ?? 'Office — Main Campus').toString().trim();
 
-    // Duplicate guard handled by UNIQUE constraint; catch and surface it
-    try {
-      const now  = new Date();
-      const hour = now.getHours();
-      const status = hour >= 9 ? 'Late' : 'Present';
+  clockAmIn: async ({ locals, request }) => {
+    const db  = getDb();
+    const uid = locals.user.id;
+    const loc = ((await request.formData()).get('location') ?? 'Office — Main Campus').toString().trim();
 
+    const rec = await getTodayRecord(db, uid);
+    if (rec?.am_in) return fail(409, { error: 'AM Time In already recorded today.' });
+
+    const status = new Date().getHours() >= 9 ? 'Late' : 'Present';
+
+    if (!rec) {
       await db`
-        INSERT INTO attendance_records (employee_id, date, clock_in_time, status, location)
-        VALUES (${userId}, CURRENT_DATE, NOW(), ${status}, ${location})
+        INSERT INTO attendance_records (employee_id, date, am_in, clock_in_time, status, location)
+        VALUES (${uid}, CURRENT_DATE, NOW(), NOW(), ${status}, ${loc})
       `;
-      return { success: true, action: 'clockIn', status };
-    } catch (err) {
-      if (err.code === '23505') {
-        return fail(409, { error: 'You have already clocked in today.' });
-      }
-      throw err;
+    } else {
+      await db`
+        UPDATE attendance_records
+        SET am_in = NOW(), clock_in_time = NOW(), status = ${status}
+        WHERE employee_id = ${uid} AND date = CURRENT_DATE
+      `;
     }
+    return { success: true, action: 'clockAmIn', status };
   },
 
-  // Clock Out
-  clockOut: async ({ locals }) => {
-    const db = getDb();
-    const userId = locals.user.id;
+  clockAmOut: async ({ locals }) => {
+    const db  = getDb();
+    const uid = locals.user.id;
 
-    const result = await db`
+    const rec = await getTodayRecord(db, uid);
+    if (!rec?.am_in)  return fail(400, { error: 'Record AM Time In first.' });
+    if (rec?.am_out)  return fail(409, { error: 'AM Time Out already recorded today.' });
+
+    await db`
       UPDATE attendance_records
-      SET    clock_out_time = NOW()
-      WHERE  employee_id = ${userId} AND date = CURRENT_DATE
-        AND  clock_out_time IS NULL
-      RETURNING id
+      SET am_out = NOW()
+      WHERE employee_id = ${uid} AND date = CURRENT_DATE
     `;
+    return { success: true, action: 'clockAmOut' };
+  },
 
-    if (result.length === 0) {
-      return fail(400, { error: 'No active clock-in found for today.' });
-    }
+  clockPmIn: async ({ locals }) => {
+    const db  = getDb();
+    const uid = locals.user.id;
 
-    return { success: true, action: 'clockOut' };
+    const rec = await getTodayRecord(db, uid);
+    if (!rec?.am_out) return fail(400, { error: 'Record AM Time Out first.' });
+    if (rec?.pm_in)   return fail(409, { error: 'PM Time In already recorded today.' });
+
+    await db`
+      UPDATE attendance_records
+      SET pm_in = NOW()
+      WHERE employee_id = ${uid} AND date = CURRENT_DATE
+    `;
+    return { success: true, action: 'clockPmIn' };
+  },
+
+  clockPmOut: async ({ locals }) => {
+    const db  = getDb();
+    const uid = locals.user.id;
+
+    const rec = await getTodayRecord(db, uid);
+    if (!rec?.pm_in)  return fail(400, { error: 'Record PM Time In first.' });
+    if (rec?.pm_out)  return fail(409, { error: 'PM Time Out already recorded today.' });
+
+    await db`
+      UPDATE attendance_records
+      SET pm_out = NOW(), clock_out_time = NOW()
+      WHERE employee_id = ${uid} AND date = CURRENT_DATE
+    `;
+    return { success: true, action: 'clockPmOut' };
   },
 
   // Apply for Leave
@@ -112,7 +149,6 @@ export const actions = {
     const reason      = (data.get('reason') ?? '').toString().trim();
     const file        = data.get('attachment');
 
-    // Validation
     const errors = {};
     if (!leaveTypeId)  errors.leave_type_id = 'Select a leave type.';
     if (!startDate)    errors.start_date    = 'Start date is required.';
@@ -126,17 +162,13 @@ export const actions = {
       return fail(400, { errors, formValues: { leaveTypeId, startDate, endDate, reason } });
     }
 
-    // Overlap check
     const overlap = await db`
       SELECT id FROM leave_requests
       WHERE  employee_id = ${locals.user.id}
         AND  status != 'Rejected'
-        AND (
-          (start_date <= ${endDate} AND end_date >= ${startDate})
-        )
+        AND (start_date <= ${endDate} AND end_date >= ${startDate})
       LIMIT 1
     `;
-
     if (overlap.length > 0) {
       return fail(409, {
         errors: { general: 'You already have a leave request overlapping these dates.' },
@@ -144,7 +176,6 @@ export const actions = {
       });
     }
 
-    // Balance check
     const year = new Date().getFullYear();
     const balance = await db`
       SELECT allocated_days - used_days AS remaining
@@ -155,37 +186,27 @@ export const actions = {
       LIMIT 1
     `;
 
-    const duration = Math.ceil(
-      (new Date(endDate) - new Date(startDate)) / 86_400_000
-    ) + 1;
+    const duration = Math.ceil((new Date(endDate) - new Date(startDate)) / 86_400_000) + 1;
 
     if (balance.length === 0 || Number(balance[0].remaining) < duration) {
       return fail(400, {
-        errors: { general: `Insufficient leave balance. You have ${balance[0]?.remaining ?? 0} day(s) remaining.` },
+        errors: { general: `Insufficient balance. You have ${balance[0]?.remaining ?? 0} day(s) remaining.` },
         formValues: { leaveTypeId, startDate, endDate, reason }
       });
     }
 
-    // Handle file attachment (store as base64 data URL for serverless)
     let attachmentUrl = null;
     if (file && file.size > 0) {
       if (file.size > 5 * 1024 * 1024) {
-        return fail(400, {
-          errors: { attachment: 'File must be under 5 MB.' },
-          formValues: { leaveTypeId, startDate, endDate, reason }
-        });
+        return fail(400, { errors: { attachment: 'File must be under 5 MB.' }, formValues: { leaveTypeId, startDate, endDate, reason } });
       }
-      const allowed = ['application/pdf', 'application/msword',
+      const allowed = ['application/pdf','application/msword',
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-        'image/jpeg', 'image/png', 'image/webp'];
+        'image/jpeg','image/png','image/webp'];
       if (!allowed.includes(file.type)) {
-        return fail(400, {
-          errors: { attachment: 'Unsupported file type.' },
-          formValues: { leaveTypeId, startDate, endDate, reason }
-        });
+        return fail(400, { errors: { attachment: 'Unsupported file type.' }, formValues: { leaveTypeId, startDate, endDate, reason } });
       }
-      const buf = await file.arrayBuffer();
-      const b64 = Buffer.from(buf).toString('base64');
+      const b64 = Buffer.from(await file.arrayBuffer()).toString('base64');
       attachmentUrl = `data:${file.type};base64,${b64.slice(0, 200)}…(file stored)`;
     }
 
