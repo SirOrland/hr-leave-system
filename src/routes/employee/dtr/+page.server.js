@@ -59,7 +59,8 @@ export async function load({ locals, url }) {
     year, month, days,
     summary: {
       present, late, absent,
-      totalHours: (totalMins / 60).toFixed(2)
+      totalMins,                               // raw minutes for client formatting
+      totalHours: (totalMins / 60).toFixed(2) // decimal for compatibility
     }
   };
 }

@@ -15,14 +15,22 @@
     return new Date(dt).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
   }
 
-  function dayHours(r) {
-    if (!r) return '';
+  function minsForDay(r) {
+    if (!r) return 0;
     let mins = 0;
     if (r.am_in  && r.am_out)  mins += (new Date(r.am_out)  - new Date(r.am_in))  / 60_000;
     if (r.pm_in  && r.pm_out)  mins += (new Date(r.pm_out)  - new Date(r.pm_in))  / 60_000;
-    if (mins <= 0) return '';
-    return `${Math.floor(mins/60)}:${String(Math.round(mins%60)).padStart(2,'0')}`;
+    return mins;
   }
+
+  function fmtMins(mins) {
+    if (!mins || mins <= 0) return '';
+    const h = Math.floor(mins / 60);
+    const m = Math.round(mins % 60);
+    return `${h}:${String(m).padStart(2, '0')}`;
+  }
+
+  function dayHours(r) { return fmtMins(minsForDay(r)); }
 
   function navigate(dir) {
     let m = month + dir, y = year;
@@ -70,7 +78,7 @@
         <span class="sum-l">Absent</span>
       </div>
       <div class="sum-pill indigo">
-        <span class="sum-n">{summary.totalHours}h</span>
+        <span class="sum-n">{fmtMins(summary.totalMins) || '0:00'}</span>
         <span class="sum-l">Total Hours</span>
       </div>
     </div>
@@ -172,11 +180,39 @@
     <tfoot>
       <tr class="row-totals">
         <td colspan="6" class="tot-label">Monthly Totals</td>
-        <td class="tot-hrs">{summary.totalHours}h</td>
+        <td class="tot-hrs">{fmtMins(summary.totalMins) || '0:00'}</td>
         <td class="tot-meta">P:{summary.present} L:{summary.late} A:{summary.absent}</td>
       </tr>
     </tfoot>
   </table>
+
+  <!-- Monthly Hours Summary Block -->
+  <div class="hours-summary">
+    <div class="hs-main">
+      <div class="hs-big-label">Total Hours Worked</div>
+      <div class="hs-big-value">{fmtMins(summary.totalMins) || '0:00'}</div>
+      <div class="hs-big-sub">{summary.totalHours} decimal hours</div>
+    </div>
+    <div class="hs-divider"></div>
+    <div class="hs-stats">
+      <div class="hs-stat">
+        <span class="hs-stat-n present">{summary.present}</span>
+        <span class="hs-stat-l">Days Present</span>
+      </div>
+      <div class="hs-stat">
+        <span class="hs-stat-n late">{summary.late}</span>
+        <span class="hs-stat-l">Days Late</span>
+      </div>
+      <div class="hs-stat">
+        <span class="hs-stat-n absent">{summary.absent}</span>
+        <span class="hs-stat-l">Days Absent</span>
+      </div>
+      <div class="hs-stat">
+        <span class="hs-stat-n total">{summary.present + summary.late}</span>
+        <span class="hs-stat-l">Days Worked</span>
+      </div>
+    </div>
+  </div>
 
   <!-- Certification text -->
   <div class="dtr-cert">
@@ -367,6 +403,90 @@
   .tot-hrs   { color: #A5F3FC; }
   .tot-meta  { font-size: .625rem; color: rgba(255,255,255,.65); }
 
+  /* Hours summary block */
+  .hours-summary {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    background: linear-gradient(135deg, #1E1B4B 0%, #312E81 50%, #1E1B4B 100%);
+    border-radius: 14px;
+    padding: 22px 28px;
+    margin-bottom: 20px;
+    color: white;
+  }
+
+  .hs-main {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 160px;
+    padding-right: 28px;
+  }
+
+  .hs-big-label {
+    font-size: .625rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: rgba(255,255,255,.5);
+    margin-bottom: 4px;
+  }
+
+  .hs-big-value {
+    font-size: 2.5rem;
+    font-weight: 900;
+    letter-spacing: -.04em;
+    color: #A5F3FC;
+    line-height: 1;
+  }
+
+  .hs-big-sub {
+    font-size: .6875rem;
+    color: rgba(255,255,255,.4);
+    margin-top: 4px;
+  }
+
+  .hs-divider {
+    width: 1px;
+    height: 60px;
+    background: rgba(255,255,255,.15);
+    margin: 0 28px;
+    flex-shrink: 0;
+  }
+
+  .hs-stats {
+    display: flex;
+    gap: 32px;
+    flex: 1;
+    justify-content: center;
+  }
+
+  .hs-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .hs-stat-n {
+    font-size: 1.75rem;
+    font-weight: 900;
+    letter-spacing: -.03em;
+    line-height: 1;
+  }
+  .hs-stat-n.present { color: #6EE7B7; }
+  .hs-stat-n.late    { color: #FCD34D; }
+  .hs-stat-n.absent  { color: #FCA5A5; }
+  .hs-stat-n.total   { color: white; }
+
+  .hs-stat-l {
+    font-size: .625rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .07em;
+    color: rgba(255,255,255,.45);
+  }
+
   /* Certification */
   .dtr-cert {
     font-size: .6875rem; color: #64748B; font-style: italic;
@@ -402,5 +522,12 @@
 
     .dtr-table th, .dtr-table td { padding: 3px 5px; }
     .dtr-table { font-size: .68rem; }
+
+    /* Keep dark summary block readable when printing */
+    .hours-summary {
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+      border: 2px solid #312E81;
+    }
   }
 </style>
