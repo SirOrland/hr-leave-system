@@ -1,6 +1,5 @@
 <script>
   import { enhance } from '$app/forms';
-  import { invalidateAll } from '$app/navigation';
   import { addToast } from '$lib/stores/toast.js';
   import Badge from '$lib/components/Badge.svelte';
 
@@ -18,23 +17,23 @@
   let editingUser = null;
   let editingLT   = null;
 
-  $: if (form?.success) {
-    const msgs = {
-      createUser: 'User created successfully.',      toggleUser: 'User status updated.',
-      editUser:   'User updated.',                   createDept: 'Department created.',
-      deleteDept: 'Department deleted.',             createLeaveType: 'Leave type created.',
-      editLeaveType: 'Leave type updated.',          toggleLeaveType: 'Leave type toggled.'
-    };
-    addToast(msgs[form.action] ?? 'Done!', 'success');
-    showNewUser = false; showNewDept = false; showNewLT = false;
-    editingUser = null; editingLT = null;
-    if (form.tab) activeTab = form.tab;
-    invalidateAll();
+  $: {
+    if (form?.success) {
+      const msgs = {
+        createUser: 'User created successfully.',      toggleUser: 'User status updated.',
+        editUser:   'User updated.',                   createDept: 'Department created.',
+        deleteDept: 'Department deleted.',             createLeaveType: 'Leave type created.',
+        editLeaveType: 'Leave type updated.',          toggleLeaveType: 'Leave type toggled.'
+      };
+      addToast(msgs[form.action] ?? 'Done!', 'success');
+      showNewUser = false; showNewDept = false; showNewLT = false;
+      editingUser = null; editingLT = null;
+      if (form.tab) activeTab = form.tab;
+    }
+    if (form?.userError) addToast(form.userError, 'error');
+    if (form?.deptError) addToast(form.deptError, 'error');
+    if (form?.ltError)   addToast(form.ltError,   'error');
   }
-
-  $: if (form?.userError) addToast(form.userError, 'error');
-  $: if (form?.deptError) addToast(form.deptError, 'error');
-  $: if (form?.ltError)   addToast(form.ltError,   'error');
 
   function fmtDate(d) {
     if (!d) return '—';
@@ -42,7 +41,6 @@
   }
 
   const ROLES = ['employee', 'manager', 'hr_admin'];
-  const eh = () => ({ async update(r) { await r.update(); } });
 </script>
 
 <svelte:head><title>Admin Settings — HRPortal</title></svelte:head>
@@ -85,22 +83,22 @@
               <div class="if-sub">Fill in the details to onboard a new user</div>
             </div>
           </div>
-          <form method="POST" action="?/createUser" use:enhance={eh}>
+          <form method="POST" action="?/createUser" use:enhance>
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label" for="u-name">Full Name <span class="req">*</span></label>
-                <input id="u-name" name="name" type="text" class="form-control" placeholder="Jane Smith" required />
+                <input id="u-name" name="name" type="text" class="form-control" placeholder="Jane Smith" />
               </div>
               <div class="form-group">
                 <label class="form-label" for="u-email">Email <span class="req">*</span></label>
-                <input id="u-email" name="email" type="email" class="form-control" placeholder="jane@company.com" required />
+                <input id="u-email" name="email" type="email" class="form-control" placeholder="jane@company.com" />
               </div>
             </div>
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label" for="u-role">Role <span class="req">*</span></label>
-                <select id="u-role" name="role" class="form-control" required>
-                  <option value="" disabled selected>Select role…</option>
+                <select id="u-role" name="role" class="form-control">
+                  <option value="">Select role…</option>
                   {#each ROLES as r}
                     <option value={r}>{r === 'hr_admin' ? 'HR Admin' : r.charAt(0).toUpperCase() + r.slice(1)}</option>
                   {/each}
@@ -118,7 +116,7 @@
             </div>
             <div class="form-group">
               <label class="form-label" for="u-pass">Temporary Password <span class="req">*</span></label>
-              <input id="u-pass" name="password" type="password" class="form-control" placeholder="Min. 8 characters" minlength="8" required />
+              <input id="u-pass" name="password" type="password" class="form-control" placeholder="Min. 8 characters" />
             </div>
             <button type="submit" class="btn btn-primary">Create Account →</button>
           </form>
@@ -135,10 +133,10 @@
               {#if editingUser?.id === u.id}
                 <tr class="edit-row">
                   <td colspan="7">
-                    <form method="POST" action="?/editUser" class="edit-inline" use:enhance={eh}>
+                    <form method="POST" action="?/editUser" class="edit-inline" use:enhance>
                       <input type="hidden" name="user_id" value={u.id} />
-                      <input name="name" type="text" class="form-control" value={u.name} required placeholder="Name" />
-                      <select name="role" class="form-control" required>
+                      <input name="name" type="text" class="form-control" value={u.name} placeholder="Name" />
+                      <select name="role" class="form-control">
                         {#each ROLES as r}
                           <option value={r} selected={u.role === r}>{r}</option>
                         {/each}
@@ -177,7 +175,7 @@
                   <td>
                     <div class="row-acts">
                       <button class="btn btn-ghost btn-sm" on:click={() => editingUser = u}>✎ Edit</button>
-                      <form method="POST" action="?/toggleUser" use:enhance={eh}>
+                      <form method="POST" action="?/toggleUser" use:enhance>
                         <input type="hidden" name="user_id" value={u.id} />
                         <button type="submit" class="btn btn-sm {u.is_active ? 'btn-danger' : 'btn-success'}">
                           {u.is_active ? 'Deactivate' : 'Activate'}
@@ -206,7 +204,7 @@
 
       {#if showNewDept}
         <div class="inline-form">
-          <form method="POST" action="?/createDept" use:enhance={eh}>
+          <form method="POST" action="?/createDept" use:enhance>
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label" for="d-name">Department Name <span class="req">*</span></label>
@@ -236,7 +234,7 @@
                 <div class="dept-card-name">{d.name}</div>
                 <div class="dept-card-desc">{d.description ?? 'No description'}</div>
               </div>
-              <form method="POST" action="?/deleteDept" use:enhance={eh}>
+              <form method="POST" action="?/deleteDept" use:enhance>
                 <input type="hidden" name="dept_id" value={d.id} />
                 <button type="submit" class="btn btn-ghost btn-sm dept-del"
                   on:click|preventDefault={(e) => { if (confirm(`Delete "${d.name}"?`)) e.currentTarget.closest('form').submit(); }}>
@@ -262,15 +260,15 @@
 
       {#if showNewLT}
         <div class="inline-form">
-          <form method="POST" action="?/createLeaveType" use:enhance={eh}>
+          <form method="POST" action="?/createLeaveType" use:enhance>
             <div class="form-row">
               <div class="form-group">
                 <label class="form-label" for="lt-name">Name <span class="req">*</span></label>
-                <input id="lt-name" name="name" type="text" class="form-control" placeholder="e.g. Paternity Leave" required />
+                <input id="lt-name" name="name" type="text" class="form-control" placeholder="e.g. Paternity Leave" />
               </div>
               <div class="form-group">
                 <label class="form-label" for="lt-days">Max Days / Year <span class="req">*</span></label>
-                <input id="lt-days" name="max_days" type="number" class="form-control" placeholder="15" min="1" required />
+                <input id="lt-days" name="max_days" type="number" class="form-control" placeholder="15" min="1" />
               </div>
             </div>
             <div class="form-group">
@@ -295,9 +293,9 @@
             </div>
             <div class="lt-body">
               {#if editingLT === lt.id}
-                <form method="POST" action="?/editLeaveType" class="lt-edit" use:enhance={eh}>
+                <form method="POST" action="?/editLeaveType" class="lt-edit" use:enhance>
                   <input type="hidden" name="lt_id" value={lt.id} />
-                  <input name="max_days" type="number" class="form-control" style="width:90px" value={lt.max_allocation_days} min="1" required />
+                  <input name="max_days" type="number" class="form-control" style="width:90px" value={lt.max_allocation_days} min="1" />
                   <button type="submit" class="btn btn-success btn-sm">✓ Save</button>
                   <button type="button" class="btn btn-ghost btn-sm" on:click={() => editingLT = null}>Cancel</button>
                 </form>
@@ -313,7 +311,7 @@
             </div>
             <div class="lt-actions">
               <button class="btn btn-ghost btn-sm" on:click={() => editingLT = lt.id}>✎ Edit Days</button>
-              <form method="POST" action="?/toggleLeaveType" use:enhance={eh}>
+              <form method="POST" action="?/toggleLeaveType" use:enhance>
                 <input type="hidden" name="lt_id" value={lt.id} />
                 <button type="submit" class="btn btn-sm {lt.is_active ? 'btn-danger' : 'btn-success'}">
                   {lt.is_active ? 'Disable' : 'Enable'}

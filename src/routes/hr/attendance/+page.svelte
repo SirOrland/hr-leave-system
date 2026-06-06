@@ -133,7 +133,7 @@
                   </td>
                   <td colspan="7">
                     <form method="POST" action="?/updateRecord" class="edit-form"
-                      use:enhance={() => ({ async update(res) { await res.update(); } })}>
+                      use:enhance={() => async ({ update }) => { await update(); }}>
                       <input type="hidden" name="record_id" value={r.id} />
                       <div class="ef-field">
                         <label class="form-label" for="ai-{r.id}">AM In</label>

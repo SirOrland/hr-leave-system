@@ -22,63 +22,60 @@ export const actions = {
 
   // ---- USER ACTIONS ----
   createUser: async ({ request }) => {
-    const db   = getDb();
-    const data = await request.formData();
-    const name       = (data.get('name')       ?? '').toString().trim();
-    const email      = (data.get('email')      ?? '').toString().trim().toLowerCase();
-    const role       = (data.get('role')       ?? '').toString();
-    const department = (data.get('department') ?? '').toString().trim();
-    const password   = (data.get('password')   ?? '').toString();
-
-    if (!name || !email || !role || !password) {
-      return fail(400, { tab: 'users', userError: 'All fields are required.' });
-    }
-    if (password.length < 8) {
-      return fail(400, { tab: 'users', userError: 'Password must be at least 8 characters.' });
-    }
-    if (!['employee', 'manager', 'hr_admin'].includes(role)) {
-      return fail(400, { tab: 'users', userError: 'Invalid role.' });
-    }
-
-    // Generate employee code
-    const maxCode = await db`
-      SELECT employee_code FROM users ORDER BY created_at DESC LIMIT 1
-    `;
-    const lastNum = maxCode.length > 0
-      ? parseInt(maxCode[0].employee_code.replace('EMP-', ''), 10)
-      : 0;
-    const empCode = `EMP-${String(lastNum + 1).padStart(4, '0')}`;
-
     try {
+      const db   = getDb();
+      const data = await request.formData();
+      const name       = (data.get('name')       ?? '').toString().trim();
+      const email      = (data.get('email')      ?? '').toString().trim().toLowerCase();
+      const role       = (data.get('role')       ?? '').toString();
+      const department = (data.get('department') ?? '').toString().trim();
+      const password   = (data.get('password')   ?? '').toString();
+
+      if (!name || !email || !role || !password) {
+        return fail(400, { tab: 'users', userError: 'All fields are required.' });
+      }
+      if (password.length < 8) {
+        return fail(400, { tab: 'users', userError: 'Password must be at least 8 characters.' });
+      }
+      if (!['employee', 'manager', 'hr_admin'].includes(role)) {
+        return fail(400, { tab: 'users', userError: 'Invalid role.' });
+      }
+
+      // Generate employee code from max numeric suffix
+      const maxRow = await db`SELECT MAX(CAST(REPLACE(employee_code,'EMP-','') AS INTEGER)) AS mx FROM users WHERE employee_code ~ '^EMP-[0-9]+$'`;
+      const lastNum = Number(maxRow[0]?.mx ?? 0);
+      const empCode = `EMP-${String(lastNum + 1).padStart(4, '0')}`;
+
       const hash = await hashPassword(password);
       await db`
         INSERT INTO users (employee_code, name, email, password_hash, role, department)
         VALUES (${empCode}, ${name}, ${email}, ${hash}, ${role}, ${department || null})
       `;
+
+      // Initialize leave balances for the new employee
+      if (role === 'employee') {
+        const year = new Date().getFullYear();
+        const lts  = await db`SELECT id, max_allocation_days FROM leave_types WHERE is_active = true`;
+        const newUser = await db`SELECT id FROM users WHERE email = ${email} LIMIT 1`;
+        if (newUser.length > 0) {
+          for (const lt of lts) {
+            await db`
+              INSERT INTO leave_balances (employee_id, leave_type_id, year, allocated_days, used_days)
+              VALUES (${newUser[0].id}, ${lt.id}, ${year}, ${lt.max_allocation_days}, 0)
+              ON CONFLICT DO NOTHING
+            `;
+          }
+        }
+      }
+
+      return { success: true, action: 'createUser', tab: 'users' };
     } catch (err) {
+      console.error('[createUser]', err);
       if (err.code === '23505') {
         return fail(409, { tab: 'users', userError: 'A user with this email already exists.' });
       }
-      throw err;
+      return fail(500, { tab: 'users', userError: `Error: ${err.message}` });
     }
-
-    // Initialize leave balances for the new employee
-    if (role === 'employee') {
-      const year = new Date().getFullYear();
-      const lts  = await db`SELECT id, max_allocation_days FROM leave_types WHERE is_active = true`;
-      const newUser = await db`SELECT id FROM users WHERE email = ${email} LIMIT 1`;
-      if (newUser.length > 0) {
-        for (const lt of lts) {
-          await db`
-            INSERT INTO leave_balances (employee_id, leave_type_id, year, allocated_days, used_days)
-            VALUES (${newUser[0].id}, ${lt.id}, ${year}, ${lt.max_allocation_days}, 0)
-            ON CONFLICT DO NOTHING
-          `;
-        }
-      }
-    }
-
-    return { success: true, action: 'createUser', tab: 'users' };
   },
 
   toggleUser: async ({ request }) => {
@@ -92,20 +89,25 @@ export const actions = {
   },
 
   editUser: async ({ request }) => {
-    const db   = getDb();
-    const data = await request.formData();
-    const id         = data.get('user_id')?.toString();
-    const name       = (data.get('name')       ?? '').toString().trim();
-    const role       = (data.get('role')       ?? '').toString();
-    const department = (data.get('department') ?? '').toString().trim();
+    try {
+      const db   = getDb();
+      const data = await request.formData();
+      const id         = data.get('user_id')?.toString();
+      const name       = (data.get('name')       ?? '').toString().trim();
+      const role       = (data.get('role')       ?? '').toString();
+      const department = (data.get('department') ?? '').toString().trim();
 
-    if (!id || !name || !role) return fail(400, { tab: 'users', userError: 'Missing fields.' });
+      if (!id || !name || !role) return fail(400, { tab: 'users', userError: 'Missing fields.' });
 
-    await db`
-      UPDATE users SET name = ${name}, role = ${role}, department = ${department || null}
-      WHERE id = ${id}
-    `;
-    return { success: true, action: 'editUser', tab: 'users' };
+      await db`
+        UPDATE users SET name = ${name}, role = ${role}, department = ${department || null}
+        WHERE id = ${id}
+      `;
+      return { success: true, action: 'editUser', tab: 'users' };
+    } catch (err) {
+      console.error('[editUser]', err);
+      return fail(500, { tab: 'users', userError: `Error: ${err.message}` });
+    }
   },
 
   // ---- DEPARTMENT ACTIONS ----
