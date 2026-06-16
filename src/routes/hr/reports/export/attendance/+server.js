@@ -1,6 +1,6 @@
 import { getDb } from '$lib/server/db.js';
 
-function csv(rows) {
+function toCSV(rows) {
   return rows.map(r =>
     r.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(',')
   ).join('\r\n');
@@ -26,24 +26,31 @@ function calcHours(am_in, am_out, pm_in, pm_out) {
 
 export async function GET({ url }) {
   const db         = getDb();
-  const dateFrom   = url.searchParams.get('from') || new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0,10);
-  const dateTo     = url.searchParams.get('to')   || new Date().toISOString().slice(0,10);
-  const department = url.searchParams.get('department') || null;
+  const today      = new Date().toISOString().slice(0, 10);
+  const monthStart = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10);
+  const dateFrom   = url.searchParams.get('from') || monthStart;
+  const dateTo     = url.searchParams.get('to')   || today;
+  const department = url.searchParams.get('department') || '';
 
-  const records = await db`
+  let records = await db`
     SELECT
-      TO_CHAR(ar.date, 'YYYY-MM-DD')  AS date,
+      TO_CHAR(ar.date, 'YYYY-MM-DD') AS date,
       u.employee_code,
       u.name,
       u.department,
-      ar.am_in, ar.am_out, ar.pm_in, ar.pm_out,
-      ar.status, ar.location
+      ar.am_in,
+      ar.am_out,
+      ar.pm_in,
+      ar.pm_out,
+      ar.status,
+      ar.location
     FROM attendance_records ar
     JOIN users u ON u.id = ar.employee_id
     WHERE ar.date BETWEEN ${dateFrom}::date AND ${dateTo}::date
-      ${department ? db`AND u.department = ${department}` : db``}
     ORDER BY ar.date, u.name
   `;
+
+  if (department) records = records.filter(r => r.department === department);
 
   const header = [
     'Date','Employee Code','Employee Name','Department',
@@ -52,15 +59,22 @@ export async function GET({ url }) {
   ];
 
   const body = records.map(r => [
-    r.date, r.employee_code, r.name, r.department ?? '',
-    fmtTime(r.am_in), fmtTime(r.am_out), fmtTime(r.pm_in), fmtTime(r.pm_out),
+    r.date,
+    r.employee_code,
+    r.name,
+    r.department ?? '',
+    fmtTime(r.am_in),
+    fmtTime(r.am_out),
+    fmtTime(r.pm_in),
+    fmtTime(r.pm_out),
     calcHours(r.am_in, r.am_out, r.pm_in, r.pm_out),
-    r.status, r.location ?? ''
+    r.status,
+    r.location ?? ''
   ]);
 
   const filename = `attendance_${dateFrom}_to_${dateTo}.csv`;
 
-  return new Response('﻿' + csv([header, ...body]), {
+  return new Response('﻿' + toCSV([header, ...body]), {
     headers: {
       'Content-Type': 'text/csv; charset=utf-8',
       'Content-Disposition': `attachment; filename="${filename}"`
