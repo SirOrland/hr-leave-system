@@ -2,7 +2,7 @@ import { redirect } from '@sveltejs/kit';
 import { getSession, clearSessionCookie, ROLE_HOME } from '$lib/server/auth.js';
 
 // Routes that are accessible to every role
-const PUBLIC_PATHS = ['/login'];
+const PUBLIC_PATHS = ['/login', '/forgot-password', '/reset-password'];
 
 // Map route prefix → allowed roles
 const ROLE_GUARDS = [

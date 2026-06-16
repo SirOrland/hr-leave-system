@@ -35,7 +35,19 @@ CREATE TABLE IF NOT EXISTS sessions (
 CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
 
 -- ============================================================
--- 3. DEPARTMENTS
+-- 3. PASSWORD RESET TOKENS
+-- ============================================================
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+  token       TEXT        PRIMARY KEY,
+  user_id     UUID        NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  expires_at  TIMESTAMPTZ NOT NULL,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_prt_user_id ON password_reset_tokens(user_id);
+
+-- ============================================================
+-- 4. DEPARTMENTS
 -- ============================================================
 CREATE TABLE IF NOT EXISTS departments (
   id          SERIAL      PRIMARY KEY,

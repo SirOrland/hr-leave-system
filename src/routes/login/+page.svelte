@@ -1,9 +1,12 @@
 <script>
   import { enhance } from '$app/forms';
+  import { page } from '$app/stores';
   export let form;
 
   let loading   = false;
   let showPass  = false;
+
+  $: passwordReset = $page.url.searchParams.get('reset') === '1';
 </script>
 
 <svelte:head><title>Sign In — HRPortal</title></svelte:head>
@@ -63,6 +66,12 @@
         <p class="card-sub">Sign in to your HR portal</p>
       </div>
 
+      {#if passwordReset}
+        <div class="alert alert-success">
+          <span>✓</span> Password updated successfully. Sign in with your new password.
+        </div>
+      {/if}
+
       {#if form?.error}
         <div class="alert alert-error">
           <span>⚠</span> {form.error}
@@ -119,6 +128,10 @@
             Sign In →
           {/if}
         </button>
+
+        <a href="/forgot-password" class="btn btn-ghost w-full forgot-btn">
+          Forgot password?
+        </a>
       </form>
 
       <!-- Demo credentials -->
@@ -342,6 +355,40 @@
     font-size: 1rem;
     line-height: 1;
     color: #94A3B8;
+  }
+
+  .forgot-btn {
+    display: block;
+    margin-top: 10px;
+    border-radius: 12px;
+    height: 44px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: #6366F1;
+    text-align: center;
+    text-decoration: none;
+    line-height: 44px;
+    border: 1.5px solid rgba(99,102,241,0.25);
+    background: rgba(99,102,241,0.04);
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .forgot-btn:hover {
+    background: rgba(99,102,241,0.09);
+    border-color: rgba(99,102,241,0.45);
+  }
+
+  .alert-success {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    background: #F0FDF4;
+    border: 1px solid #BBF7D0;
+    border-radius: 10px;
+    color: #166534;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    margin-bottom: 16px;
   }
 
   .submit-btn {
