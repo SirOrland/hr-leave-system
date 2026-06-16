@@ -21,12 +21,49 @@
   let lvStatus = '';
   let lvDept   = '';
 
+  let loading = { employees: false, attendance: false, leaves: false };
+  let errors  = { employees: null,  attendance: null,  leaves: null  };
+
   function buildUrl(base, params) {
     const q = Object.entries(params)
       .filter(([, v]) => v)
       .map(([k, v]) => `${k}=${encodeURIComponent(v)}`)
       .join('&');
     return q ? `${base}?${q}` : base;
+  }
+
+  async function download(key, url, filename) {
+    loading[key] = true;
+    errors[key]  = null;
+    try {
+      const res = await fetch(url);
+      if (!res.ok) throw new Error(`Server error ${res.status}`);
+      const blob = await res.blob();
+      const a    = document.createElement('a');
+      a.href     = URL.createObjectURL(blob);
+      a.download = filename;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch (e) {
+      errors[key] = 'Download failed. Please try again.';
+    } finally {
+      loading[key] = false;
+    }
+  }
+
+  function dlEmployees() {
+    const url = buildUrl('/hr/reports/export/employees', { department: empDept, status: empStatus });
+    download('employees', url, 'employees.csv');
+  }
+
+  function dlAttendance() {
+    const url = buildUrl('/hr/reports/export/attendance', { from: attFrom, to: attTo, department: attDept });
+    download('attendance', url, `attendance_${attFrom}_to_${attTo}.csv`);
+  }
+
+  function dlLeaves() {
+    const url = buildUrl('/hr/reports/export/leaves', { from: lvFrom, to: lvTo, status: lvStatus, department: lvDept });
+    download('leaves', url, `leave_requests_${lvFrom}_to_${lvTo}.csv`);
   }
 </script>
 
@@ -107,13 +144,10 @@
       <div class="rc-columns">
         Columns: Code · Name · Email · Role · Department · Status · Date Joined
       </div>
-      <a
-        class="btn btn-primary download-btn"
-        href={buildUrl('/hr/reports/export/employees', { department: empDept, status: empStatus })}
-        download
-      >
-        ⬇ Download CSV
-      </a>
+      {#if errors.employees}<p class="dl-error">{errors.employees}</p>{/if}
+      <button class="btn btn-primary download-btn" on:click={dlEmployees} disabled={loading.employees}>
+        {#if loading.employees}<span class="spinner"></span> Downloading…{:else}⬇ Download CSV{/if}
+      </button>
     </div>
   </div>
 
@@ -154,13 +188,10 @@
       <div class="rc-columns">
         Columns: Date · Code · Name · Department · AM In · AM Out · PM In · PM Out · Hours · Status · Location
       </div>
-      <a
-        class="btn btn-primary download-btn"
-        href={buildUrl('/hr/reports/export/attendance', { from: attFrom, to: attTo, department: attDept })}
-        download
-      >
-        ⬇ Download CSV
-      </a>
+      {#if errors.attendance}<p class="dl-error">{errors.attendance}</p>{/if}
+      <button class="btn btn-primary download-btn" on:click={dlAttendance} disabled={loading.attendance}>
+        {#if loading.attendance}<span class="spinner"></span> Downloading…{:else}⬇ Download CSV{/if}
+      </button>
     </div>
   </div>
 
@@ -212,13 +243,10 @@
       <div class="rc-columns">
         Columns: ID · Code · Name · Department · Leave Type · Start · End · Days · Reason · Status · Date Filed
       </div>
-      <a
-        class="btn btn-primary download-btn"
-        href={buildUrl('/hr/reports/export/leaves', { from: lvFrom, to: lvTo, status: lvStatus, department: lvDept })}
-        download
-      >
-        ⬇ Download CSV
-      </a>
+      {#if errors.leaves}<p class="dl-error">{errors.leaves}</p>{/if}
+      <button class="btn btn-primary download-btn" on:click={dlLeaves} disabled={loading.leaves}>
+        {#if loading.leaves}<span class="spinner"></span> Downloading…{:else}⬇ Download CSV{/if}
+      </button>
     </div>
   </div>
 
@@ -375,9 +403,28 @@
     border-radius: 11px;
     font-size: .9rem;
     font-weight: 700;
-    text-decoration: none;
     gap: 6px;
+    cursor: pointer;
+    width: 100%;
+    border: none;
   }
+  .download-btn:disabled { opacity: .65; cursor: not-allowed; }
+
+  .dl-error {
+    font-size: .8125rem;
+    color: #DC2626;
+    margin: 0;
+  }
+
+  .spinner {
+    width: 14px; height: 14px;
+    border: 2.5px solid rgba(255,255,255,.35);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+    display: inline-block;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
   @media (max-width: 900px) {
     .stat-row { grid-template-columns: repeat(2, 1fr); }
