@@ -134,26 +134,6 @@
         </a>
       </form>
 
-      <!-- Demo credentials -->
-      <div class="demo-box">
-        <div class="demo-header">
-          <span class="demo-badge">DEMO</span>
-          <span class="demo-title">Test credentials</span>
-        </div>
-        <div class="demo-rows">
-          {#each [
-            ['HR Admin',  'admin@hrms.com',   'Admin@1234'],
-            ['Manager',   'manager@hrms.com', 'Manager@1234'],
-            ['Employee',  'jane@hrms.com',    'Employee@1234']
-          ] as [role, email, pass]}
-            <div class="demo-row">
-              <span class="demo-role-tag">{role}</span>
-              <code class="demo-email">{email}</code>
-              <code class="demo-pass">{pass}</code>
-            </div>
-          {/each}
-        </div>
-      </div>
 
     </div>
   </div>
@@ -410,64 +390,6 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
 
-  /* Demo box */
-  .demo-box {
-    margin-top: 24px;
-    padding: 16px;
-    background: rgba(99,102,241,0.04);
-    border-radius: 14px;
-    border: 1px solid rgba(99,102,241,0.1);
-  }
-
-  .demo-header {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 12px;
-  }
-
-  .demo-badge {
-    font-size: 0.6rem;
-    font-weight: 900;
-    letter-spacing: 0.1em;
-    background: linear-gradient(135deg, #6366F1, #8B5CF6);
-    color: white;
-    padding: 2px 8px;
-    border-radius: 9999px;
-  }
-
-  .demo-title { font-size: 0.8125rem; font-weight: 600; color: #64748B; }
-
-  .demo-rows { display: flex; flex-direction: column; gap: 8px; }
-
-  .demo-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 0.8125rem;
-    flex-wrap: wrap;
-  }
-
-  .demo-role-tag {
-    font-size: 0.6875rem;
-    font-weight: 800;
-    color: #6366F1;
-    width: 68px;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-  }
-
-  code {
-    font-family: 'Courier New', monospace;
-    font-size: 0.78rem;
-    background: white;
-    padding: 2px 8px;
-    border-radius: 6px;
-    border: 1px solid rgba(0,0,0,0.08);
-    color: #334155;
-  }
-
-  .demo-pass { color: #6366F1; }
 
   /* Responsive */
   @media (max-width: 900px) {
