@@ -1,14 +1,17 @@
 import nodemailer from 'nodemailer';
 
 function createTransport() {
+  const { SMTP_HOST, SMTP_USER, SMTP_PASS, SMTP_PORT } = process.env;
+  if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
+    throw new Error(
+      'Email is not configured. Add SMTP_HOST, SMTP_USER, and SMTP_PASS to your environment variables.'
+    );
+  }
   return nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: Number(process.env.SMTP_PORT ?? 587),
-    secure: process.env.SMTP_PORT === '465',
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS
-    }
+    host: SMTP_HOST,
+    port: Number(SMTP_PORT ?? 587),
+    secure: SMTP_PORT === '465',
+    auth: { user: SMTP_USER, pass: SMTP_PASS }
   });
 }
 
