@@ -39,8 +39,82 @@
     goto(`?year=${y}&month=${m}`);
   }
 
+  function onYearChange(e) {
+    const y = Number(e.target.value);
+    const now = new Date();
+    // clamp month so we don't go into the future
+    const maxM = y === now.getFullYear() ? now.getMonth() + 1 : 12;
+    const m = Math.min(month, maxM);
+    goto(`?year=${y}&month=${m}`);
+  }
+
+  function onMonthChange(e) {
+    goto(`?year=${year}&month=${e.target.value}`);
+  }
+
   const today = new Date().toISOString().split('T')[0];
-  $: isCurrentMonth = year === new Date().getFullYear() && month === (new Date().getMonth() + 1);
+  const now   = new Date();
+  $: isCurrentMonth = year === now.getFullYear() && month === (now.getMonth() + 1);
+  $: maxMonthForYear = year === now.getFullYear() ? now.getMonth() + 1 : 12;
+
+  // Year options: 2020 → current year
+  const yearOptions = Array.from(
+    { length: now.getFullYear() - 2020 + 1 },
+    (_, i) => 2020 + i
+  );
+
+  // ── CSV Download ──────────────────────────────────────────────
+  function downloadCSV() {
+    const pad = n => String(n).padStart(2, '0');
+    const rows = [];
+
+    rows.push(['DAILY TIME RECORD']);
+    rows.push([`Month: ${MONTHS[month - 1]} ${year}`]);
+    rows.push([`Employee: ${user.name ?? ''}`]);
+    rows.push([`Employee No: ${user.employee_code ?? ''}`]);
+    rows.push([`Department: ${user.department ?? ''}`]);
+    rows.push([]);
+    rows.push(['Day','Day of Week','AM Time In','AM Time Out','PM Time In','PM Time Out','Total Hours','Remarks']);
+
+    for (const d of days) {
+      if (d.isSunday) {
+        rows.push([d.day, DAY_SHORT[d.dayOfWeek], 'Rest Day','','','','','']);
+        continue;
+      }
+      const r = d.record;
+      const status = r?.status ?? '';
+      const remark = status === 'Late' ? 'Late'
+                   : status === 'Absent' ? 'Absent'
+                   : status === 'Half Day' ? 'Half Day'
+                   : d.isSaturday ? 'Saturday' : '';
+      rows.push([
+        d.day,
+        DAY_SHORT[d.dayOfWeek],
+        r ? fmt(r.am_in) : '',
+        r ? fmt(r.am_out) : '',
+        r ? fmt(r.pm_in) : '',
+        r ? fmt(r.pm_out) : '',
+        dayHours(r),
+        remark
+      ]);
+    }
+
+    rows.push([]);
+    rows.push(['TOTALS','','','','','', fmtMins(summary.totalMins) || '0:00',
+      `Present:${summary.present} Late:${summary.late} Absent:${summary.absent}`]);
+
+    const csv = rows.map(r =>
+      r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')
+    ).join('\r\n');
+
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `DTR_${user.employee_code ?? 'employee'}_${year}-${pad(month)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
 </script>
 
 <svelte:head><title>DTR — {MONTHS[month-1]} {year} — HRPortal</title></svelte:head>
@@ -55,12 +129,24 @@
   <div class="dtr-toolbar">
     <!-- Month navigator -->
     <div class="month-nav">
-      <button class="nav-arrow" on:click={() => navigate(-1)}>‹</button>
-      <div class="month-label">
-        <span class="month-name">{MONTHS[month-1]}</span>
-        <span class="month-year">{year}</span>
+      <button class="nav-arrow" on:click={() => navigate(-1)} title="Previous month">‹</button>
+
+      <div class="month-selects">
+        <select class="month-select" value={month} on:change={onMonthChange}>
+          {#each MONTHS as name, i}
+            {@const mNum = i + 1}
+            <option value={mNum} disabled={mNum > maxMonthForYear}>{name}</option>
+          {/each}
+        </select>
+
+        <select class="year-select" value={year} on:change={onYearChange}>
+          {#each yearOptions as y}
+            <option value={y}>{y}</option>
+          {/each}
+        </select>
       </div>
-      <button class="nav-arrow" on:click={() => navigate(1)} disabled={isCurrentMonth}>›</button>
+
+      <button class="nav-arrow" on:click={() => navigate(1)} disabled={isCurrentMonth} title="Next month">›</button>
     </div>
 
     <!-- Summary pills -->
@@ -83,9 +169,15 @@
       </div>
     </div>
 
-    <button class="btn btn-primary print-btn" on:click={() => window.print()}>
-      🖨 Print / Save PDF
-    </button>
+    <!-- Action buttons -->
+    <div class="action-btns">
+      <button class="btn btn-outline-primary action-btn" on:click={downloadCSV} title="Download as CSV (opens in Excel)">
+        ⬇ Download CSV
+      </button>
+      <button class="btn btn-primary action-btn" on:click={() => window.print()} title="Print or save as PDF">
+        🖨 Print / PDF
+      </button>
+    </div>
   </div>
 </div>
 
@@ -253,7 +345,7 @@
     box-shadow: var(--shadow-md);
   }
 
-  .month-nav { display: flex; align-items: center; gap: 12px; }
+  .month-nav { display: flex; align-items: center; gap: 10px; }
 
   .nav-arrow {
     width: 36px; height: 36px; border-radius: 50%;
@@ -270,9 +362,27 @@
   }
   .nav-arrow:disabled { opacity: .3; cursor: not-allowed; }
 
-  .month-label { display: flex; flex-direction: column; align-items: center; min-width: 100px; }
-  .month-name  { font-size: 1.0625rem; font-weight: 900; color: var(--gray-900); letter-spacing: -.02em; }
-  .month-year  { font-size: .75rem; font-weight: 600; color: var(--gray-400); }
+  .month-selects { display: flex; gap: 6px; align-items: center; }
+
+  .month-select, .year-select {
+    height: 36px;
+    border: 1.5px solid rgba(99,102,241,0.2);
+    border-radius: 10px;
+    background: white;
+    color: var(--gray-900);
+    font-size: 0.875rem;
+    font-weight: 700;
+    padding: 0 10px;
+    cursor: pointer;
+    outline: none;
+    transition: border-color .15s;
+  }
+  .month-select:focus, .year-select:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(99,102,241,.12);
+  }
+  .month-select { width: 116px; }
+  .year-select  { width: 80px; }
 
   .sum-pills { display: flex; gap: 8px; flex: 1; flex-wrap: wrap; }
 
@@ -288,7 +398,28 @@
   .sum-n { font-size:1.125rem; font-weight:900; color:var(--gray-900); line-height:1; }
   .sum-l { font-size:.625rem; font-weight:700; text-transform:uppercase; letter-spacing:.07em; color:var(--gray-400); margin-top:2px; }
 
-  .print-btn { margin-left: auto; }
+  .action-btns { display: flex; gap: 8px; margin-left: auto; }
+
+  .action-btn {
+    height: 40px;
+    padding: 0 18px;
+    border-radius: 12px;
+    font-size: 0.875rem;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .btn-outline-primary {
+    background: transparent;
+    border: 1.5px solid rgba(99,102,241,0.4);
+    color: var(--primary);
+    cursor: pointer;
+    transition: all .15s;
+  }
+  .btn-outline-primary:hover {
+    background: rgba(99,102,241,0.08);
+    border-color: var(--primary);
+  }
 
   /* ── DTR Document ── */
   .dtr-doc {
@@ -376,7 +507,6 @@
   .td-time.tin  { color: #065F46; }
   .td-time.tout { color: #7C2D12; }
   .td-hrs  { font-weight: 800; color: #1E1B4B; }
-  .td-rem  { }
   .td-rest { font-size: .6875rem; font-weight: 700; color: #EF4444; letter-spacing: .06em; }
 
   /* Row variants */
@@ -523,11 +653,17 @@
     .dtr-table th, .dtr-table td { padding: 3px 5px; }
     .dtr-table { font-size: .68rem; }
 
-    /* Keep dark summary block readable when printing */
     .hours-summary {
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
       border: 2px solid #312E81;
     }
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 640px) {
+    .dtr-toolbar { gap: 12px; }
+    .action-btns { margin-left: 0; width: 100%; }
+    .action-btn  { flex: 1; }
   }
 </style>
