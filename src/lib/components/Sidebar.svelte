@@ -19,6 +19,7 @@
     hr_admin: [
       { href: '/hr/dashboard',      icon: '⊞', label: 'Dashboard' },
       { href: '/hr/attendance',     icon: '🕐', label: 'Attendance' },
+      { href: '/hr/reports',        icon: '📊', label: 'Reports' },
       { href: '/hr/settings',       icon: '⚙', label: 'Settings' },
       { href: '/manager/dashboard', icon: '✔', label: 'Approvals' }
     ]
